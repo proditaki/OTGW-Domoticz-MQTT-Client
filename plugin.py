@@ -187,8 +187,8 @@ class BasePlugin:
             for tempDev2 in self.getConfigItem().keys():
                 if topic == self.getConfigItem(tempDev2):
                     Domoticz.Log("Config found: " + self.getConfigItem(tempDev2))
-                if int(tempDev2) in Devices:
-                    Devices[int(tempDev2)].Update(0, str(message))
+                    if int(tempDev2) in Devices:
+                        Devices[int(tempDev2)].Update(0, str(message))
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
