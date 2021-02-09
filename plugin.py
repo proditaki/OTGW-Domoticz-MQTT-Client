@@ -1,5 +1,5 @@
 """
-<plugin key="OTGWMqttClient" name="OTGW MqttClient" version="0.0.2">
+<plugin key="OTGWMqttClient" name="OTGW MqttClient" version="0.0.3">
     <params>
         <param field="Address" label="MQTT Server address" width="300px" required="true" default="127.0.0.1"/>
         <param field="Port" label="MQTT Server Port" width="300px" required="true" default="1883"/>
@@ -43,9 +43,39 @@ class BasePlugin:
 
         Domoticz.Log("Started Heartbeat")
         Domoticz.Heartbeat(10)
-
+ 
     def createDevices(self):
         Domoticz.Log("Filler")
+
+    def getConfigItem(self, Key=None, Default={}):
+        Value = Default
+        try:
+            Config = Domoticz.Configuration()
+            if (Key != None):
+                Value = Config[Key] # only return requested key if there was one
+            else:
+                Value = Config      # return the whole configuration if no key
+        except KeyError:
+            Value = Default
+        except Exception as inst:
+            Domoticz.Error("Domoticz.Configuration read failed: '"+str(inst)+"'")
+        return Value
+    
+    def setConfigItem(self, Key=None, Value=None):
+        Config = {}
+        try:
+            Config = Domoticz.Configuration()
+            if (Key != None):
+                Config[Key] = Value
+            else:
+                Config = Value  # set whole configuration if no key specified
+            Domoticz.Configuration(Config)
+        except Exception as inst:
+            Domoticz.Error("Domoticz.Configuration operation failed: '"+str(inst)+"'")
+        return Config
+
+    def onDeviceRemoved(self, Unit):
+        Domoticz.Log('Device Removed: {0}'.format(Unit))
 
     def onStop(self):
         Domoticz.Log("Stopping")
@@ -73,6 +103,8 @@ class BasePlugin:
                     self.mqttClient.ping()
             except Exception as e:
                 Domoticz.Error(str(e))
+
+
     def firstFreeUnit(self):
         for x in range(1,255):
             if not (x in Devices):
@@ -101,10 +133,10 @@ class BasePlugin:
             data = message
             deviceName = data['name'] #.split('/')[1]
 
-            for tempDev in Devices:
-                 if Devices[tempDev].Description == data['state_topic']:
-                     Domoticz.Log('Device already exits: {0}'.format(deviceName))
-                     
+            for tempDev in self.getConfigItem().keys():
+                if data['state_topic'] == self.getConfigItem(tempDev):
+                    Domoticz.Log('Device already exists: {0}' .format(deviceName))
+
             isBinary = "binary_sensor" in topic
             hasDeviceClass = "device_class" in data
             hasUnitOfMeasurement = "unit_of_measurement"
@@ -138,21 +170,25 @@ class BasePlugin:
             Domoticz.Log("Creating Device " + deviceName)
             typeNames = ['Percentage', 'Waterflow', 'Pressure', 'Temperature', 'Switch']
             if deviceType in typeNames:
-                Domoticz.Device(Name=deviceName, Used=1, Unit=freeUnit, TypeName=deviceType, Description=data['state_topic']).Create()
-
+                Domoticz.Device(Name=deviceName, Used=0, Unit=freeUnit, TypeName=deviceType, Description=data['state_topic']).Create()
+                self.setConfigItem(str(freeUnit), data['state_topic'])
             elif deviceType == 'Counter':
                 Options={'Custom':'1;#'}
-                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=243, Subtype=31, Used=1, Description=data['state_topic'], Options=Options).Create()
+                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=243, Subtype=31, Used=0, Description=data['state_topic'], Options=Options).Create()
+                self.setConfigItem(str(freeUnit), data['state_topic'])
             elif deviceType == 'Thermostat':
-                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=242, Subtype=1, Used=1, Description=data['state_topic']).Create()
+                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=242, Subtype=1, Used=0, Description=data['state_topic']).Create()
+                self.setConfigItem(str(freeUnit), data['state_topic'])
 
             else:
                 Domoticz.Log("Unknown Device")
 
         else:
-            for tempDev in Devices:
-                if Devices[tempDev].Description == topic:
-                    Devices[tempDev].Update(0, str(message))
+            for tempDev2 in self.getConfigItem().keys():
+                if topic == self.getConfigItem(tempDev2):
+                    Domoticz.Log("Config found: " + self.getConfigItem(tempDev2))
+                if int(tempDev2) in Devices:
+                    Devices[int(tempDev2)].Update(0, str(message))
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
@@ -161,10 +197,6 @@ class BasePlugin:
         devTopic = Devices[Unit].Description.split('/')[1] # remove OTGW/
         if devTopic == 'TrSet':  # set room temprature
             self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
-
-#use REST API
-#            self.sendCommand('TT={0}'.format(str(Level)))
-
 
 
 global _plugin
@@ -198,3 +230,7 @@ def onMessage(Connection, Data):
     global _plugin
     _plugin.onMessage(Connection, Data)
 
+
+def onDeviceRemoved():
+    global _plugin
+    _plugin.onDeviceRemoved()
