@@ -192,9 +192,15 @@ class BasePlugin:
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
-        Domoticz.Log('{0} : {1}'.format(Unit ,Devices[Unit].Description))
-        devTopic = Devices[Unit].Description.split('/')[1] # remove OTGW/
+        #Domoticz.Log("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
+        #Domoticz.Log('{0} : {1}'.format(Unit ,Devices[Unit].Description))
+        devTopic = self.getConfigItem(str(Unit))
+        if '/ ' in devTopic:
+            devTopic = devTopic.split('/')[1] # remove OTGW/
+        else:
+            Domoticz.Log("Command aborted, device has no valid MQTT Topic")
+            return #something wrong with the MQTT Topic
+
         if devTopic == 'TrSet':  # set room temprature
             self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
 
