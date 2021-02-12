@@ -139,7 +139,7 @@ class BasePlugin:
 
             isBinary = "binary_sensor" in topic
             hasDeviceClass = "device_class" in data
-            hasUnitOfMeasurement = "unit_of_measurement"
+            hasUnitOfMeasurement = "unit_of_measurement" in data
             if isBinary:
                 deviceType = 'Switch'
             elif hasDeviceClass:
