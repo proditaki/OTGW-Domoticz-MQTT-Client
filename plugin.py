@@ -200,7 +200,7 @@ class BasePlugin:
         else:
             Domoticz.Log("Command aborted, device has no valid MQTT Topic")
             return #something wrong with the MQTT Topic
-
+        #todo: add all setpoints
         if devTopic == 'TrSet':  # set room temprature
             self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
 
