@@ -131,17 +131,40 @@ class BasePlugin:
     def onMQTTPublish(self, topic, message): # process incoming MQTT statuses
         if '/config' in topic:
             data = message
-            deviceName = data['name'] #.split('/')[1]
+
+            if "dev" in data: # from 0.8.0
+                if "climate" in topic:
+                    state_topic = data['temp_stat_t']
+                else:
+                    state_topic = data['stat_t']
+#                Domoticz.Log(data['dev']['name'])
+                deviceName = data['name'] #.split('/')[1]
+
+            else:
+                state_topic = data['state_topic']
+                deviceName = data['name'] #.split('/')[1]
+
+
 
             for tempDev in self.getConfigItem().keys():
-                if data['state_topic'] == self.getConfigItem(tempDev):
+                if state_topic == self.getConfigItem(tempDev):
                     Domoticz.Log('Device already exists: {0}' .format(deviceName))
+                    return
+
 
             isBinary = "binary_sensor" in topic
             hasDeviceClass = "device_class" in data
             hasUnitOfMeasurement = "unit_of_measurement" in data
+            isClimate = "climate" in topic
+
             if isBinary:
                 deviceType = 'Switch'
+            elif isClimate:
+               deviceType = 'Climate'
+               cmdTopic = data['temp_cmd_t']
+               cmdCommand = data['temp_cmd_tpl'].split('=')[0]
+            elif 'TrSet' in topic:
+                return # temporariy work around to get the Thermostat Entry
             elif hasDeviceClass:
                 deviceType = data['device_class']
             else:
@@ -156,10 +179,11 @@ class BasePlugin:
                     deviceType = 'Counter'
 
             if hasDeviceClass:
-                if data['device_class'] == 'temperature' and 'set' in data['state_topic'].lower():
-                    deviceType = 'Thermostat'
-                elif data['device_class'] == 'temperature':
+#                if data['device_class'] == 'temperature' and 'set' in state_topic.lower():
+ #                   deviceType = 'Thermostat'
+                if data['device_class'] == 'temperature':
                     deviceType = 'Temperature'
+
 
             freeUnit = self.firstFreeUnit()
 
@@ -170,20 +194,23 @@ class BasePlugin:
             Domoticz.Log("Creating Device " + deviceName)
             typeNames = ['Percentage', 'Waterflow', 'Pressure', 'Temperature', 'Switch']
             if deviceType in typeNames:
-                Domoticz.Device(Name=deviceName, Used=0, Unit=freeUnit, TypeName=deviceType, Description=data['state_topic']).Create()
-                self.setConfigItem(str(freeUnit), data['state_topic'])
+                Domoticz.Device(Name=deviceName, Used=0, Unit=freeUnit, TypeName=deviceType, Description=state_topic).Create()
+                self.setConfigItem(str(freeUnit), state_topic)
             elif deviceType == 'Counter':
                 Options={'Custom':'1;#'}
-                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=243, Subtype=31, Used=0, Description=data['state_topic'], Options=Options).Create()
-                self.setConfigItem(str(freeUnit), data['state_topic'])
-            elif deviceType == 'Thermostat':
-                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=242, Subtype=1, Used=0, Description=data['state_topic']).Create()
-                self.setConfigItem(str(freeUnit), data['state_topic'])
+                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=243, Subtype=31, Used=0, Description=state_topic, Options=Options).Create()
+                self.setConfigItem(str(freeUnit), state_topic)
+            elif deviceType == 'Climate':
+                Domoticz.Device(Name=deviceName, Unit=freeUnit, Type=242, Subtype=1, Used=0, Description=state_topic).Create()
+                self.setConfigItem(str(freeUnit), state_topic)
+                self.setConfigItem(str(freeUnit)+'top', cmdTopic)
+                self.setConfigItem(str(freeUnit)+'cmd', cmdCommand)
 
             else:
                 Domoticz.Log("Unknown Device")
 
         else:
+#            Domoticz.Log(message)
             for tempDev2 in self.getConfigItem().keys():
                 if topic == self.getConfigItem(tempDev2):
                     Domoticz.Log("Config found: " + self.getConfigItem(tempDev2))
@@ -192,17 +219,24 @@ class BasePlugin:
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
-        #Domoticz.Log("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
+        Domoticz.Log("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
         #Domoticz.Log('{0} : {1}'.format(Unit ,Devices[Unit].Description))
         devTopic = self.getConfigItem(str(Unit))
-        if '/ ' in devTopic:
-            devTopic = devTopic.split('/')[1] # remove OTGW/
-        else:
-            Domoticz.Log("Command aborted, device has no valid MQTT Topic")
-            return #something wrong with the MQTT Topic
-        #todo: add all setpoints
-        if devTopic == 'TrSet':  # set room temprature
-            self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
+        cmdTopic = self.getConfigItem(str(Unit)+'top')
+        cmdCommand = self.getConfigItem(str(Unit)+'cmd')
+
+        self.mqttClient.publish(cmdTopic ,cmdCommand + '={0}'.format(str(Level)))
+
+        
+#        if len(devTopic) > 5:
+ #           if devTopic[-5:] == 'TrSet':
+  #              self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
+   #             devTopic = devTopic.split('/')[1] # remove OTGW/
+    #        else:
+     #           Domoticz.Log(devTopic)
+      #  else:
+       #     Domoticz.Log("Command aborted, device has no valid MQTT Topic")
+        return #something wrong with the MQTT Topic
 
 
 global _plugin
