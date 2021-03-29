@@ -41,11 +41,11 @@ class BasePlugin:
 
         self.mqttClient = MqttClientSH2(self.mqttserveraddress, self.mqttserverport, "", self.onMQTTConnected, self.onMQTTDisconnected, self.onMQTTPublish, self.onMQTTSubscribed)
 
-        Domoticz.Log("Started Heartbeat")
+        Domoticz.Debug("Started Heartbeat")
         Domoticz.Heartbeat(10)
  
     def createDevices(self):
-        Domoticz.Log("Filler")
+        Domoticz.Debug("Filler")
 
     def getConfigItem(self, Key=None, Default={}):
         Value = Default
@@ -75,10 +75,10 @@ class BasePlugin:
         return Config
 
     def onDeviceRemoved(self, Unit):
-        Domoticz.Log('Device Removed: {0}'.format(Unit))
+        Domoticz.Debug('Device Removed: {0}'.format(Unit))
 
     def onStop(self):
-        Domoticz.Log("Stopping")
+        Domoticz.Debug("Stopping")
 #        self.mqttClient.loop_stop()
 
     def onConnect(self, Connection, Status, Description):
@@ -97,7 +97,7 @@ class BasePlugin:
         if self.mqttClient is not None:
             try:
                 if (self.mqttClient._connection is None) or (not self.mqttClient.isConnected):
-                    Domoticz.Log("Reconnecting")
+                    Domoticz.Debug("Reconnecting")
                     self.mqttClient._open()
                 else:
                     self.mqttClient.ping()
@@ -108,7 +108,7 @@ class BasePlugin:
     def firstFreeUnit(self):
         for x in range(1,255):
             if not (x in Devices):
-#                Domoticz.Log(str(x))
+#                Domoticz.Debug(str(x))
                 return x
         return -1
 
@@ -137,7 +137,7 @@ class BasePlugin:
                     state_topic = data['temp_stat_t']
                 else:
                     state_topic = data['stat_t']
-#                Domoticz.Log(data['dev']['name'])
+#                Domoticz.Debug(data['dev']['name'])
                 deviceName = data['name'] #.split('/')[1]
 
             else:
@@ -148,7 +148,7 @@ class BasePlugin:
 
             for tempDev in self.getConfigItem().keys():
                 if state_topic == self.getConfigItem(tempDev):
-                    Domoticz.Log('Device already exists: {0}' .format(deviceName))
+                    Domoticz.Debug('Device already exists: {0}' .format(deviceName))
                     return
 
 
@@ -191,7 +191,7 @@ class BasePlugin:
                 Domotic.Log("Too Many Devices")
                 return
 
-            Domoticz.Log("Creating Device " + deviceName)
+            Domoticz.Debug("Creating Device " + deviceName)
             typeNames = ['Percentage', 'Waterflow', 'Pressure', 'Temperature', 'Switch']
             if deviceType in typeNames:
                 Domoticz.Device(Name=deviceName, Used=0, Unit=freeUnit, TypeName=deviceType, Description=state_topic).Create()
@@ -207,20 +207,20 @@ class BasePlugin:
                 self.setConfigItem(str(freeUnit)+'cmd', cmdCommand)
 
             else:
-                Domoticz.Log("Unknown Device")
+                Domoticz.Debug("Unknown Device")
 
         else:
-#            Domoticz.Log(message)
+#            Domoticz.Debug(message)
             for tempDev2 in self.getConfigItem().keys():
                 if topic == self.getConfigItem(tempDev2):
-                    Domoticz.Log("Config found: " + self.getConfigItem(tempDev2))
+                    Domoticz.Debug("Config found: " + self.getConfigItem(tempDev2))
                     if int(tempDev2) in Devices:
                         Devices[int(tempDev2)].Update(0, str(message))
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Log("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
-        #Domoticz.Log('{0} : {1}'.format(Unit ,Devices[Unit].Description))
+        Domoticz.Debug("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
+        #Domoticz.Debug('{0} : {1}'.format(Unit ,Devices[Unit].Description))
         devTopic = self.getConfigItem(str(Unit))
         cmdTopic = self.getConfigItem(str(Unit)+'top')
         cmdCommand = self.getConfigItem(str(Unit)+'cmd')
@@ -233,9 +233,9 @@ class BasePlugin:
   #              self.mqttClient.publish(self.otgw_topic + '/command', 'TT={0}'.format(str(Level)))
    #             devTopic = devTopic.split('/')[1] # remove OTGW/
     #        else:
-     #           Domoticz.Log(devTopic)
+     #           Domoticz.Debug(devTopic)
       #  else:
-       #     Domoticz.Log("Command aborted, device has no valid MQTT Topic")
+       #     Domoticz.Debug("Command aborted, device has no valid MQTT Topic")
         return #something wrong with the MQTT Topic
 
 
