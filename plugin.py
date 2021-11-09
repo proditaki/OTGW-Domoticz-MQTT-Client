@@ -3,6 +3,8 @@
     <params>
         <param field="Address" label="MQTT Server address" width="300px" required="true" default="127.0.0.1"/>
         <param field="Port" label="MQTT Server Port" width="300px" required="true" default="1883"/>
+        <param field="Username" label="Username" width="300px"/>
+        <param field="Password" label="Password" width="300px" default="" password="true"/>
         <param field="Mode1" label="OTGW Server address" width="300px" required="true" default="192.168.2.6"/>
         <param field="Mode2" label="discovery topic" width="300px" required="true" default="homeassistant"/>
         <param field="Mode3" label="OTGW topic" width="300px" required="true" default="OTGW"/>
