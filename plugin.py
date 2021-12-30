@@ -216,8 +216,21 @@ class BasePlugin:
             for tempDev2 in self.getConfigItem().keys():
                 if topic == self.getConfigItem(tempDev2):
                     Domoticz.Debug("Config found: " + self.getConfigItem(tempDev2))
-                    if int(tempDev2) in Devices:
-                        Devices[int(tempDev2)].Update(0, str(message))
+                    
+                    sValue = str(message)
+                    nValue = 0
+                    curr_sValue = Devices[int(tempDev2)].sValue
+
+                    if sValue == "ON":
+                        sValue = "100"
+                        nValue = 1
+
+                    if sValue == "OFF":
+                        sValue = "0"
+                        nValue = 0
+
+                    if curr_sValue != sValue:
+                        Devices[int(tempDev2)].Update(nValue, sValue)
                     break
 
     def onCommand(self, Unit, Command, Level, Hue):
