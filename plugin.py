@@ -216,22 +216,22 @@ class BasePlugin:
             for tempDev2 in self.getConfigItem().keys():
                 if topic == self.getConfigItem(tempDev2):
                     Domoticz.Debug("Config found: " + self.getConfigItem(tempDev2))
-                    
-                    sValue = str(message)
-                    nValue = 0
-                    curr_sValue = Devices[int(tempDev2)].sValue
-
-                    if sValue == "ON":
-                        sValue = "100"
-                        nValue = 1
-
-                    if sValue == "OFF":
-                        sValue = "0"
+                    if int(tempDev2) in Devices:
+                        sValue = str(message)
                         nValue = 0
+                        curr_sValue = Devices[int(tempDev2)].sValue
 
-                    if curr_sValue != sValue:
-                        Devices[int(tempDev2)].Update(nValue, sValue)
-                    break
+                        if sValue == "ON":
+                            sValue = "100"
+                            nValue = 1
+
+                        if sValue == "OFF":
+                            sValue = "0"
+                            nValue = 0
+
+                        if curr_sValue != sValue:
+                            Devices[int(tempDev2)].Update(nValue, sValue)
+                        break
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
