@@ -231,7 +231,7 @@ class BasePlugin:
 
                         if curr_sValue != sValue:
                             Devices[int(tempDev2)].Update(nValue, sValue)
-                        break
+                    break
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("Command: Unit: {0}; Command {1}; Level {2}; Hue {3}".format(Unit,Command,Level,Hue))
